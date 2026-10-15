@@ -1,0 +1,82 @@
+[
+  {
+    "clip_path": "data/clips/clip_01.mp4",
+    "caption": "a flower blooming in close-up",
+    "junk_clip_path": "data/clips/clip_02.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_02.mp4",
+    "caption": "animated rabbit running through a forest",
+    "junk_clip_path": "data/clips/clip_03.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_03.mp4",
+    "caption": "cartoon rabbit exploring green woods",
+    "junk_clip_path": "data/clips/clip_05.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_05.mp4",
+    "caption": "person walking outdoors in daylight",
+    "junk_clip_path": "data/clips/clip_06.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_06.mp4",
+    "caption": "scenic nature landscape with movement",
+    "junk_clip_path": "data/clips/clip_11.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_11.mp4",
+    "caption": "abstract color test pattern moving",
+    "junk_clip_path": "data/clips/clip_12.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_12.mp4",
+    "caption": "high definition sample video of shapes",
+    "junk_clip_path": "data/clips/clip_13.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_13.mp4",
+    "caption": "short outdoor scene with motion",
+    "junk_clip_path": "data/clips/clip_14b.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_14b.mp4",
+    "caption": "continued outdoor footage segment",
+    "junk_clip_path": "data/clips/clip_15b.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_15b.mp4",
+    "caption": "nature clip showing trees and sky",
+    "junk_clip_path": "data/clips/clip_16b.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_16b.mp4",
+    "caption": "another short nature sequence",
+    "junk_clip_path": "data/clips/clip_17b.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_17b.mp4",
+    "caption": "landscape view with camera movement",
+    "junk_clip_path": "data/clips/clip_18.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_18.mp4",
+    "caption": "animated character in colorful environment",
+    "junk_clip_path": "data/clips/clip_19.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_19.mp4",
+    "caption": "cartoon animal moving through grass",
+    "junk_clip_path": "data/clips/clip_14.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_14.mp4",
+    "caption": "brief outdoor activity clip",
+    "junk_clip_path": "data/clips/clip_15.mp4"
+  },
+  {
+    "clip_path": "data/clips/clip_15.mp4",
+    "caption": "short scenic video segment",
+    "junk_clip_path": "data/clips/clip_01.mp4"
+  }
+]
