@@ -48,8 +48,19 @@ def extract_frames(path, indices):
 
 def load_model():
     """Try InternVideo2 stage-2 small; fall back to ViCLIP-B-16-hf."""
+    # Ensure pkg_resources is available (ViCLIP modeling file needs it)
+    try:
+        import pkg_resources
+    except ImportError:
+        import subprocess, sys
+        print("Installing setuptools for pkg_resources...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "setuptools"])
+        import pkg_resources
+    model_name = None
     try:
         from transformers import AutoModel, AutoTokenizer
+        # Smallest practical stage-2 that may fit 16GB
+        # InternVideo2-Stage2_1B is large; try distillation or ViCLIP first
         print("Attempting ViCLIP-B-16-hf (fits 16GB T4)...")
         model = AutoModel.from_pretrained(
             "OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True
