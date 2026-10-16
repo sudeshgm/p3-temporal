@@ -107,6 +107,8 @@ def get_video_embedding(model, frames, model_name):
                 feat = model.get_vid_features(tube)
             else:
                 feat = model.vision_model(tube).pooler_output if hasattr(model, "vision_model") else tube.mean(dim=[2, 3, 4])
+            if not isinstance(feat, torch.Tensor):
+                feat = getattr(feat, "pooler_output", feat[0] if isinstance(feat, (tuple, list)) else feat)
             feat = F.normalize(feat, dim=-1)
         return feat.squeeze(0).cpu().numpy()
     elif model_name.startswith("CLIP"):
@@ -124,6 +126,8 @@ def get_video_embedding(model, frames, model_name):
         batch = torch.stack(feats).to(DEVICE)  # T,C,H,W
         with torch.no_grad():
             img_feats = model.get_image_features(pixel_values=batch)
+            if not isinstance(img_feats, torch.Tensor):
+                img_feats = getattr(img_feats, "pooler_output", img_feats[0] if isinstance(img_feats, (tuple, list)) else img_feats)
             img_feats = F.normalize(img_feats, dim=-1)
             vid_feat = img_feats.mean(dim=0)
             vid_feat = F.normalize(vid_feat, dim=-1)
@@ -140,12 +144,16 @@ def get_text_embedding(model, tokenizer, text, model_name):
                 feat = model.get_text_features(inputs["input_ids"])
             else:
                 feat = model.text_model(**inputs).pooler_output
+            if not isinstance(feat, torch.Tensor):
+                feat = getattr(feat, "pooler_output", feat[0] if isinstance(feat, (tuple, list)) else feat)
             feat = F.normalize(feat, dim=-1)
         return feat.squeeze(0).cpu().numpy()
     elif model_name.startswith("CLIP"):
         inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=77).to(DEVICE)
         with torch.no_grad():
             feat = model.get_text_features(**inputs)
+            if not isinstance(feat, torch.Tensor):
+                feat = getattr(feat, "pooler_output", feat[0] if isinstance(feat, (tuple, list)) else feat)
             feat = F.normalize(feat, dim=-1)
         return feat.squeeze(0).cpu().numpy()
     else:
