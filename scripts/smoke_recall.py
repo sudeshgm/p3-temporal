@@ -167,7 +167,10 @@ def get_text_embedding(model, tokenizer, text, model_name):
         inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=77).to(DEVICE)
         with torch.no_grad():
             if hasattr(model, "get_text_features"):
-                feat = model.get_text_features(inputs["input_ids"])
+                try:
+                    feat = model.get_text_features(inputs["input_ids"], tokenizer=tokenizer)
+                except TypeError:
+                    feat = model.get_text_features(inputs["input_ids"])
             else:
                 feat = model.text_model(**inputs).pooler_output
             if not isinstance(feat, torch.Tensor):
