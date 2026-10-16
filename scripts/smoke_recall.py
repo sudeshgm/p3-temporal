@@ -48,8 +48,8 @@ def extract_frames(path, indices):
 
 
 def load_model():
-    """Attempt frozen InternVideo2 stage-2 first, then LanguageBind (final other model), then ViCLIP, then CLIP."""
-    import sys, types
+    """Priority: InternVideo2 (with flash_attn install attempt) then one other video encoder. Capture exact errors."""
+    import sys, types, subprocess
     if "pkg_resources" not in sys.modules:
         try:
             import pkg_resources
@@ -62,11 +62,21 @@ def load_model():
 
     from transformers import AutoModel, AutoTokenizer
 
-    # 1. InternVideo2 (document failures)
+    # Attempt flash_attn install for InternVideo2
+    print("Attempting to install flash-attn for InternVideo2...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", "flash-attn", "--no-build-isolation"], timeout=600)
+        print("flash-attn install succeeded")
+    except Exception as e:
+        print(f"flash-attn install failed: {type(e).__name__}: {e}")
+
+    errors = []
+
+    # 1. InternVideo2 candidates (smallest ungated first)
     iv2_candidates = [
-        "OpenGVLab/InternVideo2_CLIP_S",
-        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",
+        "OpenGVLab/InternVideo2_CLIP_S",  # 0.4B public distilled
         "OpenGVLab/InternVideo2-Stage2_6B",
+        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",  # gated
     ]
     for ckpt in iv2_candidates:
         try:
@@ -77,52 +87,32 @@ def load_model():
             print(f"Loaded {model_name}")
             return model, tokenizer, model_name
         except Exception as e:
-            print(f"InternVideo2 {ckpt} failed: {type(e).__name__}: {e}")
+            err = f"{ckpt}: {type(e).__name__}: {e}"
+            print(f"InternVideo2 failed: {err}")
+            errors.append(err)
 
-    # 2. FINAL: LanguageBind-Video first (one other model)
-    print("FINAL attempt: LanguageBind-Video_FT")
+    # 2. One additional public video encoder
+    print("InternVideo2 failed. Trying additional video encoder...")
     try:
-        model = AutoModel.from_pretrained("LanguageBind/LanguageBind_Video_FT", trust_remote_code=True).to(DEVICE).eval()
-        tokenizer = AutoTokenizer.from_pretrained("LanguageBind/LanguageBind_Video_FT", trust_remote_code=True)
-        model_name = "LanguageBind-Video_FT"
-        print(f"Loaded {model_name}")
-        return model, tokenizer, model_name
-    except Exception as e:
-        print(f"LanguageBind failed: {type(e).__name__}: {e}")
-
-    # 3. ViCLIP only if LanguageBind fails
-    print("LanguageBind failed. Falling back to ViCLIP...")
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "fvcore", "einops", "ftfy", "timm"])
-    except Exception as e:
-        print(f"pip install failed: {e}")
-    try:
-        print("Attempting ViCLIP-B-16-hf")
+        print("Attempting ViCLIP-B-16-hf as additional")
         model = AutoModel.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True).to(DEVICE).eval()
         try:
             tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True)
         except Exception:
             from transformers import CLIPTokenizer
-            print("Custom AutoTokenizer failed; falling back to CLIPTokenizer")
             tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
         model_name = "ViCLIP-B-16-hf"
         print(f"Loaded {model_name}")
         return model, tokenizer, model_name
     except Exception as e:
-        print(f"ViCLIP load failed: {e}")
+        err = f"ViCLIP-B-16-hf: {type(e).__name__}: {e}"
+        print(f"Additional failed: {err}")
+        errors.append(err)
 
-    # 4. Last resort CLIP frame-mean
-    print("Falling back to openai/clip-vit-base-patch32 (frame-mean)")
-    try:
-        from transformers import CLIPModel, CLIPTokenizer
-        model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(DEVICE).eval()
-        tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
-        model_name = "CLIP-ViT-B-32-frame-mean"
-        print(f"Loaded {model_name}")
-        return model, tokenizer, model_name
-    except Exception as e2:
-        print(f"All model attempts failed: {e2}")
-        return None, None, None
+    print("All video encoder attempts failed:")
+    for err in errors:
+        print(f"  - {err}")
+    return None, None, None
 
 
 def get_video_embedding(model, frames, model_name):
@@ -262,7 +252,7 @@ def main():
         all_results["conditions"][cond] = metrics
         print(f"{cond}: R@1={metrics['R@1']:.3f} R@5={metrics['R@5']:.3f} MedR={metrics['MedR']:.1f}")
 
-    out_name = "smoke_final.json"
+    out_name = "smoke_retry.json"
     out_path = RESULTS / out_name
     with open(out_path, "w") as f:
         json.dump(all_results, f, indent=2)
