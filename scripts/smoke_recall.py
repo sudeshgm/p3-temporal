@@ -88,7 +88,12 @@ def load_model():
     try:
         print("Attempting ViCLIP-B-16-hf")
         model = AutoModel.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True).to(DEVICE).eval()
-        tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True)
+        try:
+            tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True)
+        except Exception:
+            from transformers import CLIPTokenizer
+            print("Custom AutoTokenizer failed; falling back to CLIPTokenizer")
+            tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
         model_name = "ViCLIP-B-16-hf"
         print(f"Loaded {model_name}")
         return model, tokenizer, model_name
