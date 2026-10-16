@@ -48,70 +48,56 @@ def extract_frames(path, indices):
 
 
 def load_model():
-    """Priority: InternVideo2 (with flash_attn install attempt) then one other video encoder. Capture exact errors."""
+    """Final try: fix packaging/setuptools then load ViCLIP-B-16-hf. One optional extra if it fails."""
     import sys, types, subprocess
-    if "pkg_resources" not in sys.modules:
-        try:
-            import pkg_resources
-        except ImportError:
-            dummy = types.ModuleType("pkg_resources")
-            dummy.require = lambda *a, **k: None
-            dummy.working_set = []
-            sys.modules["pkg_resources"] = dummy
-            print("Injected dummy pkg_resources")
+    # Ensure real packaging / setuptools (avoid broken dummy)
+    print("Fixing packaging / setuptools...")
+    try:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "--force-reinstall", "--no-cache-dir", "packaging", "setuptools"])
+        print("packaging + setuptools reinstalled")
+    except Exception as e:
+        print(f"pip reinstall failed: {e}")
+
+    # Remove any dummy pkg_resources so the real one is used
+    if "pkg_resources" in sys.modules:
+        del sys.modules["pkg_resources"]
+    try:
+        import pkg_resources
+        import packaging
+        print(f"pkg_resources ok, packaging {packaging.__version__}")
+    except Exception as e:
+        print(f"import check failed: {e}")
 
     from transformers import AutoModel, AutoTokenizer
 
-    # Attempt flash_attn install for InternVideo2
-    print("Attempting to install flash-attn for InternVideo2...")
+    # Primary: ViCLIP-B-16-hf
+    print("Attempting ViCLIP-B-16-hf (final)")
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--no-cache-dir", "flash-attn", "--no-build-isolation"], timeout=600)
-        print("flash-attn install succeeded")
-    except Exception as e:
-        print(f"flash-attn install failed: {type(e).__name__}: {e}")
-
-    errors = []
-
-    # 1. InternVideo2 candidates (smallest ungated first)
-    iv2_candidates = [
-        "OpenGVLab/InternVideo2_CLIP_S",  # 0.4B public distilled
-        "OpenGVLab/InternVideo2-Stage2_6B",
-        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",  # gated
-    ]
-    for ckpt in iv2_candidates:
-        try:
-            print(f"Attempting InternVideo2: {ckpt}")
-            model = AutoModel.from_pretrained(ckpt, trust_remote_code=True).to(DEVICE).eval()
-            tokenizer = AutoTokenizer.from_pretrained(ckpt, trust_remote_code=True)
-            model_name = f"InternVideo2:{ckpt}"
-            print(f"Loaded {model_name}")
-            return model, tokenizer, model_name
-        except Exception as e:
-            err = f"{ckpt}: {type(e).__name__}: {e}"
-            print(f"InternVideo2 failed: {err}")
-            errors.append(err)
-
-    # 2. One additional public video encoder
-    print("InternVideo2 failed. Trying additional video encoder...")
-    try:
-        print("Attempting ViCLIP-B-16-hf as additional")
         model = AutoModel.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True).to(DEVICE).eval()
         try:
             tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True)
         except Exception:
             from transformers import CLIPTokenizer
+            print("Custom AutoTokenizer failed; using CLIPTokenizer")
             tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
         model_name = "ViCLIP-B-16-hf"
         print(f"Loaded {model_name}")
         return model, tokenizer, model_name
     except Exception as e:
-        err = f"ViCLIP-B-16-hf: {type(e).__name__}: {e}"
-        print(f"Additional failed: {err}")
-        errors.append(err)
+        print(f"ViCLIP failed: {type(e).__name__}: {e}")
 
-    print("All video encoder attempts failed:")
-    for err in errors:
-        print(f"  - {err}")
+    # Optional single extra
+    print("Optional extra: attempting a small public video model...")
+    try:
+        model = AutoModel.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True).to(DEVICE).eval()
+        tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True)
+        model_name = "ViCLIP-B-16-hf-retry"
+        print(f"Loaded {model_name}")
+        return model, tokenizer, model_name
+    except Exception as e:
+        print(f"Extra attempt failed: {type(e).__name__}: {e}")
+
+    print("No model loaded")
     return None, None, None
 
 
@@ -252,7 +238,7 @@ def main():
         all_results["conditions"][cond] = metrics
         print(f"{cond}: R@1={metrics['R@1']:.3f} R@5={metrics['R@5']:.3f} MedR={metrics['MedR']:.1f}")
 
-    out_name = "smoke_retry.json"
+    out_name = "smoke_final_retry.json"
     out_path = RESULTS / out_name
     with open(out_path, "w") as f:
         json.dump(all_results, f, indent=2)
