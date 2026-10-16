@@ -48,9 +48,8 @@ def extract_frames(path, indices):
 
 
 def load_model():
-    """Attempt frozen InternVideo2 stage-2 first (smallest public that may fit 16GB T4), then ViCLIP after deps, then LanguageBind, then CLIP frame-mean."""
+    """Attempt frozen InternVideo2 stage-2 first, then LanguageBind (final other model), then ViCLIP, then CLIP."""
     import sys, types
-    # Dummy pkg_resources
     if "pkg_resources" not in sys.modules:
         try:
             import pkg_resources
@@ -63,10 +62,10 @@ def load_model():
 
     from transformers import AutoModel, AutoTokenizer
 
-    # 1. Try InternVideo2 stage-2 candidates (document exact names)
+    # 1. InternVideo2 (document failures)
     iv2_candidates = [
-        "OpenGVLab/InternVideo2_CLIP_S",  # 0.4B public distilled, custom_code
-        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",  # gated
+        "OpenGVLab/InternVideo2_CLIP_S",
+        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",
         "OpenGVLab/InternVideo2-Stage2_6B",
     ]
     for ckpt in iv2_candidates:
@@ -80,8 +79,19 @@ def load_model():
         except Exception as e:
             print(f"InternVideo2 {ckpt} failed: {type(e).__name__}: {e}")
 
-    # 2. Install missing deps and try ViCLIP
-    print("InternVideo2 attempts failed. Installing deps for ViCLIP...")
+    # 2. FINAL: LanguageBind-Video first (one other model)
+    print("FINAL attempt: LanguageBind-Video_FT")
+    try:
+        model = AutoModel.from_pretrained("LanguageBind/LanguageBind_Video_FT", trust_remote_code=True).to(DEVICE).eval()
+        tokenizer = AutoTokenizer.from_pretrained("LanguageBind/LanguageBind_Video_FT", trust_remote_code=True)
+        model_name = "LanguageBind-Video_FT"
+        print(f"Loaded {model_name}")
+        return model, tokenizer, model_name
+    except Exception as e:
+        print(f"LanguageBind failed: {type(e).__name__}: {e}")
+
+    # 3. ViCLIP only if LanguageBind fails
+    print("LanguageBind failed. Falling back to ViCLIP...")
     try:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "fvcore", "einops", "ftfy", "timm"])
     except Exception as e:
@@ -100,17 +110,6 @@ def load_model():
         return model, tokenizer, model_name
     except Exception as e:
         print(f"ViCLIP load failed: {e}")
-
-    # 3. One other frozen public video encoder (not InternVideo2 / ViCLIP)
-    print("Trying LanguageBind-Video as additional frozen model...")
-    try:
-        model = AutoModel.from_pretrained("LanguageBind/LanguageBind_Video_FT", trust_remote_code=True).to(DEVICE).eval()
-        tokenizer = AutoTokenizer.from_pretrained("LanguageBind/LanguageBind_Video_FT", trust_remote_code=True)
-        model_name = "LanguageBind-Video_FT"
-        print(f"Loaded {model_name}")
-        return model, tokenizer, model_name
-    except Exception as e:
-        print(f"LanguageBind failed: {type(e).__name__}: {e}")
 
     # 4. Last resort CLIP frame-mean
     print("Falling back to openai/clip-vit-base-patch32 (frame-mean)")
@@ -137,9 +136,9 @@ def get_video_embedding(model, frames, model_name):
             std = np.array([0.229, 0.224, 0.225])
             arr = (arr - mean) / std
             imgs.append(arr)
-        tube = np.stack(imgs, axis=0)  # T,H,W,C
-        tube = np.transpose(tube, (0, 3, 1, 2))  # T,C,H,W
-        tube = torch.from_numpy(tube).float().unsqueeze(0).to(DEVICE)  # 1,T,C,H,W
+        tube = np.stack(imgs, axis=0)
+        tube = np.transpose(tube, (0, 3, 1, 2))
+        tube = torch.from_numpy(tube).float().unsqueeze(0).to(DEVICE)
         with torch.no_grad():
             if hasattr(model, "get_vid_features"):
                 feat = model.get_vid_features(tube)
@@ -150,18 +149,16 @@ def get_video_embedding(model, frames, model_name):
             feat = F.normalize(feat, dim=-1)
         return feat.squeeze(0).cpu().numpy()
     elif model_name.startswith("CLIP"):
-        # Frame-mean CLIP image embeddings
         feats = []
         for fr in frames:
             im = fr.resize((224, 224))
             arr = np.array(im).astype(np.float32) / 255.0
-            # CLIP normalization
             mean = np.array([0.48145466, 0.4578275, 0.40821073])
             std = np.array([0.26862954, 0.26130258, 0.27577711])
             arr = (arr - mean) / std
-            arr = np.transpose(arr, (2, 0, 1))  # C,H,W
+            arr = np.transpose(arr, (2, 0, 1))
             feats.append(torch.from_numpy(arr).float())
-        batch = torch.stack(feats).to(DEVICE)  # T,C,H,W
+        batch = torch.stack(feats).to(DEVICE)
         with torch.no_grad():
             img_feats = model.get_image_features(pixel_values=batch)
             if not isinstance(img_feats, torch.Tensor):
@@ -202,12 +199,11 @@ def get_text_embedding(model, tokenizer, text, model_name):
 
 
 def compute_metrics(sim_matrix):
-    """sim_matrix: [n_text, n_video] higher better. Diagonal is correct match for t2v."""
     n = sim_matrix.shape[0]
     ranks = []
     for i in range(n):
         row = sim_matrix[i]
-        rank = (row > row[i]).sum() + 1  # 1-based rank of the correct video
+        rank = (row > row[i]).sum() + 1
         ranks.append(rank)
     ranks = np.array(ranks)
     r1 = (ranks <= 1).mean()
@@ -233,12 +229,11 @@ def main():
     conditions = ["clean", "pad_dup", "pad_junk"]
     all_results = {"model": model_name, "n_clips": n, "conditions": {}}
 
-    # Precompute text embeddings (same for all conditions)
     captions = [item["caption"] for item in manifest]
     text_embs = []
     for cap in captions:
         text_embs.append(get_text_embedding(model, tokenizer, cap, model_name))
-    text_embs = np.stack(text_embs)  # N, D
+    text_embs = np.stack(text_embs)
 
     for cond in conditions:
         print(f"\n=== Condition: {cond} ===")
@@ -260,9 +255,9 @@ def main():
             emb = get_video_embedding(model, frames, model_name)
             video_embs.append(emb)
             print(f"  clip {i+1}/{n} done")
-        video_embs = np.stack(video_embs)  # N, D
+        video_embs = np.stack(video_embs)
 
-        sim = text_embs @ video_embs.T  # N, N
+        sim = text_embs @ video_embs.T
         metrics = compute_metrics(sim)
         all_results["conditions"][cond] = metrics
         print(f"{cond}: R@1={metrics['R@1']:.3f} R@5={metrics['R@5']:.3f} MedR={metrics['MedR']:.1f}")
