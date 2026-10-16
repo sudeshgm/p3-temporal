@@ -47,20 +47,21 @@ def extract_frames(path, indices):
 
 
 def load_model():
-    """Try InternVideo2 stage-2 small; fall back to ViCLIP-B-16-hf."""
-    # Ensure pkg_resources is available (ViCLIP modeling file needs it)
-    try:
-        import pkg_resources
-    except ImportError:
-        import subprocess, sys
-        print("Installing setuptools for pkg_resources...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "setuptools"])
-        import pkg_resources
-    model_name = None
+    """Try ViCLIP-B-16-hf; fall back to pure transformers CLIP (frame-mean) if custom code fails."""
+    # Minimal dummy pkg_resources if the environment has a broken setuptools
+    import sys, types
+    if "pkg_resources" not in sys.modules:
+        try:
+            import pkg_resources  # noqa: F401
+        except ImportError:
+            dummy = types.ModuleType("pkg_resources")
+            dummy.require = lambda *a, **k: None
+            dummy.working_set = []
+            sys.modules["pkg_resources"] = dummy
+            print("Injected dummy pkg_resources")
+
     try:
         from transformers import AutoModel, AutoTokenizer
-        # Smallest practical stage-2 that may fit 16GB
-        # InternVideo2-Stage2_1B is large; try distillation or ViCLIP first
         print("Attempting ViCLIP-B-16-hf (fits 16GB T4)...")
         model = AutoModel.from_pretrained(
             "OpenGVLab/ViCLIP-B-16-hf", trust_remote_code=True
@@ -73,8 +74,18 @@ def load_model():
         return model, tokenizer, model_name
     except Exception as e:
         print(f"ViCLIP load failed: {e}")
-        print("BLOCKER: no suitable frozen model loaded. Install transformers + trust_remote_code deps.")
-        return None, None, None
+        print("Falling back to openai/clip-vit-base-patch32 (frame-mean video embedding)")
+        try:
+            from transformers import CLIPModel, CLIPTokenizer
+            model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(DEVICE).eval()
+            tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
+            model_name = "CLIP-ViT-B-32-frame-mean"
+            print(f"Loaded {model_name}")
+            return model, tokenizer, model_name
+        except Exception as e2:
+            print(f"CLIP fallback also failed: {e2}")
+            print("BLOCKER: no suitable frozen model loaded.")
+            return None, None, None
 
 
 def get_video_embedding(model, frames, model_name):
@@ -98,6 +109,25 @@ def get_video_embedding(model, frames, model_name):
                 feat = model.vision_model(tube).pooler_output if hasattr(model, "vision_model") else tube.mean(dim=[2, 3, 4])
             feat = F.normalize(feat, dim=-1)
         return feat.squeeze(0).cpu().numpy()
+    elif model_name.startswith("CLIP"):
+        # Frame-mean CLIP image embeddings
+        feats = []
+        for fr in frames:
+            im = fr.resize((224, 224))
+            arr = np.array(im).astype(np.float32) / 255.0
+            # CLIP normalization
+            mean = np.array([0.48145466, 0.4578275, 0.40821073])
+            std = np.array([0.26862954, 0.26130258, 0.27577711])
+            arr = (arr - mean) / std
+            arr = np.transpose(arr, (2, 0, 1))  # C,H,W
+            feats.append(torch.from_numpy(arr).float())
+        batch = torch.stack(feats).to(DEVICE)  # T,C,H,W
+        with torch.no_grad():
+            img_feats = model.get_image_features(pixel_values=batch)
+            img_feats = F.normalize(img_feats, dim=-1)
+            vid_feat = img_feats.mean(dim=0)
+            vid_feat = F.normalize(vid_feat, dim=-1)
+        return vid_feat.cpu().numpy()
     else:
         raise NotImplementedError(model_name)
 
@@ -110,6 +140,12 @@ def get_text_embedding(model, tokenizer, text, model_name):
                 feat = model.get_text_features(inputs["input_ids"])
             else:
                 feat = model.text_model(**inputs).pooler_output
+            feat = F.normalize(feat, dim=-1)
+        return feat.squeeze(0).cpu().numpy()
+    elif model_name.startswith("CLIP"):
+        inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=77).to(DEVICE)
+        with torch.no_grad():
+            feat = model.get_text_features(**inputs)
             feat = F.normalize(feat, dim=-1)
         return feat.squeeze(0).cpu().numpy()
     else:
