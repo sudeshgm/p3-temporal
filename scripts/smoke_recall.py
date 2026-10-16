@@ -64,9 +64,9 @@ def load_model():
 
     # 1. Try InternVideo2 stage-2 candidates (document exact names)
     iv2_candidates = [
-        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",  # gated, may fail
+        "OpenGVLab/InternVideo2_CLIP_S",  # 0.4B public distilled, custom_code
+        "OpenGVLab/InternVideo2-Stage2_1B-224p-f4",  # gated
         "OpenGVLab/InternVideo2-Stage2_6B",
-        "OpenGVLab/InternVideo2_CLIP_S",  # ~0.4B distilled CLIP-style
     ]
     for ckpt in iv2_candidates:
         try:
@@ -247,7 +247,7 @@ def main():
         all_results["conditions"][cond] = metrics
         print(f"{cond}: R@1={metrics['R@1']:.3f} R@5={metrics['R@5']:.3f} MedR={metrics['MedR']:.1f}")
 
-    out_name = "smoke_internvideo2.json" if "InternVideo2" in (model_name or "") else ("smoke_viclip.json" if "ViCLIP" in (model_name or "") else "smoke_results.json")
+    out_name = "smoke_valid.json"
     out_path = RESULTS / out_name
     with open(out_path, "w") as f:
         json.dump(all_results, f, indent=2)
