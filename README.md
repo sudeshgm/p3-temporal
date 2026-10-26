@@ -31,15 +31,24 @@ noise floor) and `results/block1_verdict.json`.
 Block 2 is out of scope here.
 
 
-## Block 1 results (GPU run, Kaggle T4, repo commit 5bb6715; models run: viclip_l, openclip_meanpool)
-Text-to-video on MSR-VTT 1k-A, mean ± std over junk seeds 0,1,2 (`results/block1.csv`, `results/block1_verdict.json`, logs in `results/logs/`).
+## Block 1 results (GPU, Kaggle T4; ViCLIP-L + OpenCLIP at commit 5bb6715, InternVideo2_CLIP_S at 3027f10, fp16 autocast)
+Text-to-video on MSR-VTT 1k-A; mean ± std over junk seeds 0,1,2 (clean = single run). Re-scored locally with `scripts/score.py`
+(matches GPU Bot's table). Files: `results/block1.csv`, `results/block1_verdict.json`, logs in `results/logs/`.
 
-| model | clean R@1/R@5 | start R@1 | middle R@1 | end R@1 | start R@5 | middle R@5 | end R@5 | PE | worst | noise |
-|---|---|---|---|---|---|---|---|---|---|---|
-| viclip_l | 39.2 / 63.9 | 18.87±0.15 | 9.23±0.81 | 23.73±0.38 | 40.07±0.93 | 25.97±0.55 | 43.40±1.22 | 14.50 | middle | 1.63 |
-| openclip_meanpool (null) | 36.1 / 57.5 | 26.10±0.62 | 27.03±1.45 | 26.90±1.21 | 48.13±1.18 | 50.70±0.92 | 49.97±1.34 | 0.93 | start | 2.89 |
+| model | clean R@1 / R@5 | start R@1 / R@5 | middle R@1 / R@5 | end R@1 / R@5 | PE | worst | noise |
+|---|---|---|---|---|---|---|---|
+| internvideo2_s | 42.8 / 68.6 | 15.53±0.85 / 35.37±1.04 | 24.90±1.13 / 48.00±0.17 | 22.77±1.53 / 46.27±0.70 | 9.37 | start | 3.06 |
+| viclip_l | 39.2 / 63.9 | 18.87±0.15 / 40.07±0.93 | 9.23±0.81 / 25.97±0.55 | 23.73±0.38 / 43.40±1.22 | 14.50 | middle | 1.63 |
+| openclip_meanpool (null) | 36.1 / 57.5 | 26.10±0.62 / 48.13±1.18 | 27.03±1.45 / 50.70±0.92 | 26.90±1.21 / 49.97±1.34 | 0.93 | start | 2.89 |
 
-**Verdict: UNCLEAR.** ViCLIP-L shows a large position effect (14.5 pts vs null 0.93), so it is not KILL, but the worst position is MIDDLE, not START, so the pre-registered GO is not met. InternVideo2 did not run. Block 2 not started.
+**Verdict: GO** (pre-registered rule): InternVideo2_CLIP_S has PE 9.37 >= null PE 0.93 + 2 with START worst, so KILL does not hold.
+(An earlier 2-model run with only ViCLIP-L and the null was UNCLEAR.)
+
+**Caveat: MIDDLE-continuity confound (raised by the P3 Idea Agent).** ViCLIP-L's worst position is MIDDLE, not START. MIDDLE junk
+(slots 2-5) is the only condition that splits the 4 real frames into two separate runs (0-1 and 6-7). START and END each keep one
+run of 4 real frames in a row. So ViCLIP-L's MIDDLE drop may come from broken temporal continuity, not from a position weighting, and the
+three positions differ in continuity as well as in position. This also affects how to read the IV2-S result. Block 2's sliding-evidence
+design (with continuity matched across positions) is needed to separate the two. Block 2 has not been started.
 
 ---
 ## Legacy (earlier smoke attempt, superseded)

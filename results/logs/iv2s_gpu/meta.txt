@@ -1,0 +1,5 @@
+commit=3027f10d11e8bd28e70ef38fdc9ff89f8876ed7f
+iv2s_exit=0
+encode_wall_s=1729
+wall_s=1750
+gpu=Tesla T4

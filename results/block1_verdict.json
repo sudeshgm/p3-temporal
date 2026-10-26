@@ -1,7 +1,22 @@
 {
- "verdict": "UNCLEAR",
+ "verdict": "GO",
  "null": "openclip_meanpool",
  "summary": {
+  "internvideo2_s": {
+   "PE": 9.366666666666669,
+   "worst": "start",
+   "noise": 3.0615900008546744,
+   "mean_r1": {
+    "start": 15.533333333333333,
+    "middle": 24.900000000000002,
+    "end": 22.766666666666666
+   },
+   "std_r1": {
+    "start": 0.8504900548115396,
+    "middle": 1.1269427669584662,
+    "end": 1.5307950004273372
+   }
+  },
   "viclip_l": {
    "PE": 14.500000000000002,
    "worst": "middle",

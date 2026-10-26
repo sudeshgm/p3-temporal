@@ -1,0 +1,14 @@
+huggingface_hub                       0.36.2
+open_clip_torch                       3.3.0
+timm                                  1.0.29
+torch                                 2.11.0+cu128
+torchao                               0.10.0
+torchaudio                            2.11.0+cu128
+torchcodec                            0.11.0+cu128
+torchdata                             0.11.0
+torchinfo                             1.8.0
+torchmetrics                          1.9.0
+torchsummary                          1.5.1
+torchtune                             0.6.1
+torchvision                           0.26.0+cu128
+transformers                          4.49.0
