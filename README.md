@@ -50,6 +50,20 @@ run of 4 real frames in a row. So ViCLIP-L's MIDDLE drop may come from broken te
 three positions differ in continuity as well as in position. This also affects how to read the IV2-S result. Block 2's sliding-evidence
 design (with continuity matched across positions) is needed to separate the two. Block 2 has not been started.
 
+## Block 2a (step 1: offset sweep, built, awaiting GPU)
+Design: the 4 real frames are always the clip's sampled frames **0,1,2,3 in temporal order** (content fixed, only position moves),
+placed as ONE contiguous block at offset k=0..4 of the 8 slots, with the other 4 slots filled by the **same Block 1 junk**
+(seeds 0,1,2, same per-clip junk set, same fill order). Plus **SPLIT**: real 0,1 in slots 0-1 and real 2,3 in slots 6-7, junk in 2-5.
+Identity check against Block 1 (`scripts/build_block2a.py`): **off0 == Block 1 END for all 3000 rows (reused)**. Block 1 START (real 4-7)
+and MIDDLE (real 0,1,6,7) use *different real frames*, so off4 and split are new rows, not reused.
+New rows: off1-off4 + split x 3 seeds x 1000 = **15,000** (`data/manifest_block2a.json`). The mean-pool null is order-invariant and sees the
+same frame set in every Block 2a condition, so its Block 2a curve equals Block 1 END exactly (flat by construction, D_null = 0); it needs no GPU.
+GPU: `tar xzf p3_block2a_bundle.tgz && bash scripts/gpu_job_block2a.sh` (IV2-S + ViCLIP-L; `RUN_NULL=1` also encodes OpenCLIP).
+Score: `python scripts/score_block2a.py --emb <dir with Block 1 + Block 2a embeddings per model>` -> `results/block2a.csv`, `results/block2a_verdict.json`.
+**Pre-registered read (IV2-S):** EARLY-BIAS (GO) if R@1 decreases monotonically off0->off4 (each step non-increasing within the noise floor, 2x max
+seed std) and D = R@1(off0) - R@1(off4) >= D_null + 2. KILL if flat (D <= max(1, noise)) or split explains the gap
+(|split - mean(continuous)| >= D). Else UNCLEAR. Also reports split - off2. `scripts/test_score_block2a.py` checks GO / flat-KILL / split-KILL on fake data.
+
 ---
 ## Legacy (earlier smoke attempt, superseded)
 ## P3 Temporal Embedding Diagnostics

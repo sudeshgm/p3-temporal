@@ -108,7 +108,7 @@ def main(a):
     keep = set(clips); rows = [r for r in man["rows"] if r["clip"] in keep]
     M = {"viclip_b": lambda: ViCLIP("b", a.device), "viclip_l": lambda: ViCLIP("l", a.device),
          "openclip_meanpool": lambda: OpenCLIPMean(a.device), "internvideo2": lambda: InternVideo2(a.device)}[a.model]()
-    out = f"{a.emb}/{a.model}"; os.makedirs(out, exist_ok=True)
+    out = f"{a.emb}/{a.out_name or a.model}"; os.makedirs(out, exist_ok=True)
     with torch.no_grad():
         caps = [man["captions"][c] for c in clips]
         np.save(f"{out}/text.npy", torch.cat([M.text(caps[i:i+64]) for i in range(0, len(caps), 64)]).cpu().numpy())
@@ -126,5 +126,5 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(); p.add_argument("--model", required=True)
     p.add_argument("--manifest", default="/workspace/p3/data/manifest.json"); p.add_argument("--emb", default="/workspace/p3/emb")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    p.add_argument("--limit", type=int, default=0); p.add_argument("--bs", type=int, default=16)
+    p.add_argument("--out_name", default=""); p.add_argument("--limit", type=int, default=0); p.add_argument("--bs", type=int, default=16)
     main(p.parse_args())
