@@ -1,0 +1,37 @@
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:   8%|▊         | 1/12 [00:00<00:03,  3.11it/s]Fetching 12 files:  25%|██▌       | 3/12 [00:00<00:02,  4.16it/s]Fetching 12 files:  67%|██████▋   | 8/12 [00:04<00:02,  1.51it/s]Fetching 12 files: 100%|██████████| 12/12 [00:04<00:00,  2.47it/s]
+/usr/local/lib/python3.13/dist-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/usr/local/lib/python3.13/dist-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
+/root/.cache/huggingface/modules/transformers_modules/1652361522e1cb41c28cdfae870f690d00e7456b/viclip_text.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import packaging
+viclip_l: 1000 clips, 15000 rows, 15000 unique frame tuples
+/usr/local/lib/python3.13/dist-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/usr/local/lib/python3.13/dist-packages/torch/utils/checkpoint.py:232: UserWarning: None of the inputs have requires_grad=True. Gradients will be None
+  check_backward_validity(args)
+  32/15000
+  672/15000
+  1312/15000
+  1952/15000
+  2592/15000
+  3232/15000
+  3872/15000
+  4512/15000
+  5152/15000
+  5792/15000
+  6432/15000
+  7072/15000
+  7712/15000
+  8352/15000
+  8992/15000
+  9632/15000
+  10272/15000
+  10912/15000
+  11552/15000
+  12192/15000
+  12832/15000
+  13472/15000
+  14112/15000
+  14752/15000
+wrote emb_b2a/viclip_l [('b2a_off1', 0), ('b2a_off1', 1), ('b2a_off1', 2), ('b2a_off2', 0), ('b2a_off2', 1), ('b2a_off2', 2), ('b2a_off3', 0), ('b2a_off3', 1), ('b2a_off3', 2), ('b2a_off4', 0), ('b2a_off4', 1), ('b2a_off4', 2), ('b2a_split', 0), ('b2a_split', 1), ('b2a_split', 2)]

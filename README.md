@@ -64,6 +64,29 @@ Score: `python scripts/score_block2a.py --emb <dir with Block 1 + Block 2a embed
 seed std) and D = R@1(off0) - R@1(off4) >= D_null + 2. KILL if flat (D <= max(1, noise)) or split explains the gap
 (|split - mean(continuous)| >= D). Else UNCLEAR. Also reports split - off2. `scripts/test_score_block2a.py` checks GO / flat-KILL / split-KILL on fake data.
 
+## Block 2a results (GPU, Kaggle T4, commit 29583c9; IV2-S 2318 s, ViCLIP-L 8391 s)
+Text embeddings from the Block 2a run are identical to Block 1 (max |diff| = 0). off0 = Block 1 END. The mean-pool null = Block 1 END for every condition (order-invariant).
+R@1 / R@5, mean ± std over seeds 0,1,2 (`results/block2a.csv`, `results/block2a_verdict.json`, logs in `results/logs/block2a_gpu/`):
+
+| model | off0 | off1 | off2 | off3 | off4 | split |
+|---|---|---|---|---|---|---|
+| internvideo2_s | 22.77±1.53 / 46.27±0.70 | 19.37±1.37 / 40.47±0.95 | 16.47±1.27 / 37.00±0.61 | 16.20±1.73 / 37.03±0.95 | 17.77±1.19 / 38.73±0.47 | 22.77±1.90 / 45.47±0.49 |
+| viclip_l | 23.73±0.38 / 43.40±1.22 | 30.07±1.62 / 52.00±0.96 | 31.43±0.84 / 53.80±1.21 | 30.13±0.50 / 52.73±0.45 | 19.57±1.47 / 40.47±1.31 | 8.87±0.81 / 25.43±0.84 |
+| openclip_meanpool | 26.90±1.21 / 49.97±1.34 | same | same | same | same | same |
+
+| model | D (off0-off4) | noise | split - mean(cont) | split - off2 | monotonic (within noise / strict) |
+|---|---|---|---|---|---|
+| internvideo2_s | 5.00 | 3.80 | +4.25 | +6.30 | yes / no |
+| viclip_l | 4.17 | 3.24 | -18.12 | -22.57 | no / no |
+| openclip_meanpool | 0.00 | 2.42 | 0.00 | 0.00 | - |
+
+**Pre-registered verdict: EARLY-BIAS (GO)** for IV2-S (D 5.00 >= D_null 0 + 2, monotonic within noise, not flat, split gap 4.25 < D).
+**Caveats (the margins are thin):**
+- The IV2-S curve is not strictly monotonic: it bottoms out at off3 (16.20) and rises at off4 (17.77, within noise). D is only 1.2 pts above the noise floor.
+- IV2-S **split equals off0** (22.77): having a real frame in slot 0 (plus slot 7) does as well as the contiguous block at the front. That fits a *first-slot / edge* effect better than a smooth early-to-late decay. The split-explains test missed it by 0.75 pts (4.25 vs D 5.00).
+- ViCLIP-L is the opposite: an inverted U (best in the middle offsets) and a collapse at split (8.87). That confirms the Block 1 MIDDLE drop for ViCLIP-L was a **continuity (split) effect, not position**.
+No further blocks run.
+
 ---
 ## Legacy (earlier smoke attempt, superseded)
 ## P3 Temporal Embedding Diagnostics

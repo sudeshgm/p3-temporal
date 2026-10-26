@@ -1,0 +1,244 @@
+Fetching 14 files:   0%|          | 0/14 [00:00<?, ?it/s]Fetching 14 files:   7%|▋         | 1/14 [00:00<00:03,  3.52it/s]Fetching 14 files:  79%|███████▊  | 11/14 [00:04<00:01,  2.47it/s]Fetching 14 files: 100%|██████████| 14/14 [00:04<00:00,  3.17it/s]
+InternVideo2Config {
+  "_attn_implementation_autoset": true,
+  "_name_or_path": "/root/.cache/p3/InternVideo2_CLIP_S_noflash",
+  "architectures": [
+    "InternVideo2_CLIP_small"
+  ],
+  "auto_map": {
+    "AutoConfig": "config.InternVideo2Config",
+    "AutoModel": "modeling_internvideo2encoder.InternVideo2_CLIP_small"
+  },
+  "auto_resume": false,
+  "batch_size": 64,
+  "batch_size_test": 4,
+  "best_key": [
+    "msrvtt_1k_test_match",
+    "t2v_r1"
+  ],
+  "compile_model": false,
+  "criterion": {
+    "clip_loss_ratio": [
+      1.0,
+      1.0
+    ],
+    "distill_final_features": true,
+    "loss_weight": {
+      "mlm": 1.0,
+      "mvm": 0.0,
+      "uta": 0.0,
+      "vtc": 1.0,
+      "vtm": 1.0
+    },
+    "mlm_masking_prob": 0.5,
+    "vtm_hard_neg": true
+  },
+  "debug": false,
+  "deep_fusion": false,
+  "deepspeed": {
+    "enable": true,
+    "stage": 1
+  },
+  "delete_ds_optim_states": true,
+  "device": "cuda",
+  "dist_url": "env://",
+  "evaluate": false,
+  "evaluation": {
+    "eval_frame_ensemble": "concat",
+    "eval_offload": true,
+    "eval_x_only": false,
+    "k_test": 128
+  },
+  "gradient_checkpointing": true,
+  "inputs": {
+    "batch_size": {
+      "image": 64,
+      "video": 64
+    },
+    "batch_size_test": {
+      "image": 4,
+      "video": 4
+    },
+    "image_res": 224,
+    "max_txt_l": {
+      "image": 32,
+      "video": 32
+    },
+    "video_input": {
+      "num_frames": 8,
+      "num_frames_test": 8,
+      "random_aug": false,
+      "sample_type": "middle",
+      "sample_type_test": "middle"
+    }
+  },
+  "jump_evaluate": false,
+  "log_freq": 100,
+  "max_txt_l": 32,
+  "mode": "pt",
+  "model": {
+    "embed_dim": 1024,
+    "find_unused_parameters": false,
+    "freeze_text": true,
+    "freeze_vision": true,
+    "load_vision_ckpt_from_internvideo2_stage2": false,
+    "model_cls": "InternVideo2_CLIP_small",
+    "multimodal": {
+      "enable": true
+    },
+    "open_text_projection": false,
+    "open_vision_clip_projector": true,
+    "temp": 0.01,
+    "temp_min": 0.01,
+    "text_encoder": {
+      "embed_dim": 512,
+      "image_cfg": {
+        "image_size": 224,
+        "model_name": "vit_b16"
+      },
+      "text_cfg": {
+        "causal_masking": true,
+        "context_length": 77,
+        "dim": 512,
+        "ffn_multiplier_per_layer": 4.0,
+        "model_name": "base",
+        "n_heads_per_layer": 8,
+        "n_transformer_layers": 12,
+        "norm_layer": "layer_norm_fp32",
+        "vocab_size": 49408
+      }
+    },
+    "vision_encoder": {
+      "align_dim": 512,
+      "attn_pool_num_heads": 16,
+      "checkpoint_num": 0,
+      "clip_embed_dim": 768,
+      "depth": 24,
+      "drop_cls_token": false,
+      "drop_path_rate": 0.0,
+      "embed_dim": 1024,
+      "fused_mlp_heuristic": 1,
+      "head_drop_path_rate": 0.0,
+      "img_size": 224,
+      "in_chans": 3,
+      "init_values": 0.1,
+      "layerscale_no_force_fp32": true,
+      "mlp_ratio": 4,
+      "name": "internvideo2_1B",
+      "num_frames": 8,
+      "num_heads": 16,
+      "patch_size": 14,
+      "qk_normalization": true,
+      "qkv_bias": false,
+      "sep_pos_embed": false,
+      "tubelet_size": 1,
+      "use_checkpoint": false,
+      "use_flash_attn": false,
+      "use_fused_mlp": false,
+      "use_fused_rmsnorm": false
+    }
+  },
+  "model_type": "internvideo2",
+  "num_frames": 8,
+  "num_frames_test": 8,
+  "num_workers": 6,
+  "optimizer": {
+    "different_lr": {
+      "enable": false,
+      "lr": 0.001,
+      "module_names": []
+    },
+    "lr": 5e-05,
+    "max_grad_norm": 3.0,
+    "opt": "adamW",
+    "opt_betas": [
+      0.9,
+      0.98
+    ],
+    "weight_decay": 0.05
+  },
+  "output_dir": null,
+  "pretrained_path": "",
+  "resume": false,
+  "save_ckpt_iter": null,
+  "save_latest": true,
+  "scheduler": {
+    "epochs": 10,
+    "min_lr_multi": 0.01,
+    "sched": "cosine",
+    "warmup_epochs": 1
+  },
+  "seed": 42,
+  "test_file": {
+    "didemo_ret_test": "available_corpus[\"didemo_ret_test\"]",
+    "msrvtt_1k_test": "available_corpus[\"msrvtt_1k_test\"]"
+  },
+  "test_types": [
+    "msrvtt_1k_test",
+    "didemo_ret_test"
+  ],
+  "text_enc": "bert_large",
+  "tokenizer": null,
+  "torch_dtype": "float32",
+  "train_file": "available_corpus[\"pretrain_example_data_1B\"]",
+  "transformers_version": "4.49.0",
+  "use_bf16": true,
+  "use_flash_sdp": false,
+  "use_half_precision": false,
+  "use_mem_efficient_sdp": false,
+  "wandb": {
+    "enable": false,
+    "entity": "opengvlab",
+    "project": "InternVideo2-Stage2"
+  }
+}
+
+internvideo2: 1000 clips, 15000 rows, 15000 unique frame tuples
+  16/15000
+  336/15000
+  656/15000
+  976/15000
+  1296/15000
+  1616/15000
+  1936/15000
+  2256/15000
+  2576/15000
+  2896/15000
+  3216/15000
+  3536/15000
+  3856/15000
+  4176/15000
+  4496/15000
+  4816/15000
+  5136/15000
+  5456/15000
+  5776/15000
+  6096/15000
+  6416/15000
+  6736/15000
+  7056/15000
+  7376/15000
+  7696/15000
+  8016/15000
+  8336/15000
+  8656/15000
+  8976/15000
+  9296/15000
+  9616/15000
+  9936/15000
+  10256/15000
+  10576/15000
+  10896/15000
+  11216/15000
+  11536/15000
+  11856/15000
+  12176/15000
+  12496/15000
+  12816/15000
+  13136/15000
+  13456/15000
+  13776/15000
+  14096/15000
+  14416/15000
+  14736/15000
+wrote emb_b2a/internvideo2_s [('b2a_off1', 0), ('b2a_off1', 1), ('b2a_off1', 2), ('b2a_off2', 0), ('b2a_off2', 1), ('b2a_off2', 2), ('b2a_off3', 0), ('b2a_off3', 1), ('b2a_off3', 2), ('b2a_off4', 0), ('b2a_off4', 1), ('b2a_off4', 2), ('b2a_split', 0), ('b2a_split', 1), ('b2a_split', 2)]
