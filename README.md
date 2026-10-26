@@ -1,5 +1,7 @@
 # P3 — early-frame bias in video-text dual encoders (Block 1 kill test)
 
+> **Status: KILLED (2026-10-26).** See [FAILURE_REPORT.md](FAILURE_REPORT.md).
+
 Does text-to-video retrieval depend on *where* junk frames sit (start/middle/end) at a fixed 8-frame budget,
 beyond plain dilution and beyond a position-free mean-pooled image-CLIP null?
 
