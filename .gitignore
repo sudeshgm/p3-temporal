@@ -3,3 +3,5 @@ emb/
 .venv/
 __pycache__/
 *.npy
+results/ret/
+*.tgz

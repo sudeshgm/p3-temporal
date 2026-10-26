@@ -1,7 +1,7 @@
 """Block 1 encoder forward passes. Reads data/manifest.json, writes EMB/<model>/text.npy and
 video_<cond>_s<seed>.npy (rows in manifest clip order). Unique frame-tuples are encoded once.
 Models: viclip_b (CPU fallback), viclip_l, openclip_meanpool (ViT-L-14 openai, mean of 8 normalised frame
-embeddings = no-position null), internvideo2 (InternVideo2-CLIP, 8 frames, flash-attn OFF; see README).
+embeddings = no-position null), internvideo2 (public InternVideo2_CLIP_S, 8 frames, flash_attn-free SDPA patch).
 Usage: python encode.py --model viclip_l [--device cuda] [--limit N] [--bs 16]"""
 import argparse, json, os, sys, numpy as np, torch, cv2
 from huggingface_hub import snapshot_download
@@ -34,25 +34,67 @@ class OpenCLIPMean:
         return (f/f.norm(dim=-1, keepdim=True)).view(B, T, -1).mean(1)
     def text(s, caps): return s.m.encode_text(s.tok(caps).to(s.dev)).float()
 
+IV2S_FLASH_STUB = '''"""P3 patch: flash_attn-free FlashAttention using torch SDPA (works on CPU and sm75/T4)."""
+import torch, torch.nn as nn, torch.nn.functional as F
+class FlashAttention(nn.Module):
+    def __init__(self, softmax_scale=None, attention_dropout=0.0, device=None, dtype=None):
+        super().__init__(); self.softmax_scale = softmax_scale; self.dropout_p = attention_dropout
+    def forward(self, qkv, key_padding_mask=None, causal=False, cu_seqlens=None, max_s=None, need_weights=False):
+        q, k, v = qkv.unbind(2)  # (B,S,3,H,D) -> (B,S,H,D)
+        q, k, v = (t.transpose(1, 2) for t in (q, k, v))
+        m = None if key_padding_mask is None else key_padding_mask[:, None, None, :].bool()
+        o = F.scaled_dot_product_attention(q, k, v, attn_mask=m, dropout_p=self.dropout_p if self.training else 0.0,
+                                           is_causal=causal and m is None, scale=self.softmax_scale)
+        return o.transpose(1, 2), None
+'''
+SDPA_NAIVE = '''        attn = ((q * self.scale) @ k.transpose(-2, -1))
+        # attn = attn - attn.max(-1)[0].unsqueeze(-1)  # in case of overflow for fp16
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+        
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)'''
+SDPA_NEW = '''        x = F.scaled_dot_product_attention(q, k, v, scale=self.scale).transpose(1, 2).reshape(B, N, C)  # P3 patch: SDPA'''
+
+def patched_iv2s_repo():
+    """Copy OpenGVLab/InternVideo2_CLIP_S remote code to a local dir with all flash_attn imports removed and
+    fused ops / flash-attn forced off in config.json."""
+    import shutil
+    src = snapshot_download("OpenGVLab/InternVideo2_CLIP_S")
+    dst = os.path.expanduser("~/.cache/p3/InternVideo2_CLIP_S_noflash")
+    if not os.path.exists(f"{dst}/.patched"):
+        shutil.rmtree(dst, ignore_errors=True); shutil.copytree(src, dst, symlinks=False)
+        open(f"{dst}/flash_attention_class.py", "w").write(IV2S_FLASH_STUB)
+        for fn in ("internvideo2_clip_vision.py", "internvideo2.py"):
+            t = open(f"{dst}/{fn}").read()
+            t = t.replace("from flash_attn.modules.mlp import FusedMLP", "FusedMLP = None  # P3 patch: no flash_attn")
+            t = t.replace("from flash_attn.modules.mlp import Mlp as FusedMLP", "FusedMLP = None  # P3 patch")
+            t = t.replace("from flash_attn.ops.rms_norm import DropoutAddRMSNorm", "DropoutAddRMSNorm = None  # P3 patch")
+            assert SDPA_NAIVE in t or fn == "internvideo2.py", fn
+            t = t.replace(SDPA_NAIVE, SDPA_NEW)
+            assert "import flash_attn" not in t and "from flash_attn" not in t, fn
+            open(f"{dst}/{fn}", "w").write(t)
+        c = json.load(open(f"{dst}/config.json")); ve = c["model"]["vision_encoder"]
+        ve.update(use_flash_attn=False, use_fused_rmsnorm=False, use_fused_mlp=False); c["device"] = "cpu"
+        c["torch_dtype"] = "float32"; json.dump(c, open(f"{dst}/config.json", "w"), indent=1)
+        open(f"{dst}/.patched", "w").write("ok")
+    return dst
+
 class InternVideo2:
-    """UNTESTED (needs GPU + gated weights). Setup: git clone https://github.com/OpenGVLab/InternVideo;
-    IV2_DIR=InternVideo/InternVideo2/multi_modality; IV2_CFG=its CLIP config (8 frames, 224);
-    IV2_CKPT=1B_clip.pth from OpenGVLab/InternVideo2-CLIP-1B-224p-f8 (gated: accept terms, set HF_TOKEN) + towers per its README.
-    No public 'L14' InternVideo2-CLIP checkpoint found on HF; 1B-224p-f8 is the closest public 8-frame one."""
+    """Public OpenGVLab/InternVideo2_CLIP_S (8 frames, 224), flash_attn-free patched copy (SDPA attention, no fused ops).
+    fp32 on CPU; fp16 on CUDA (T4/sm75 fine: SDPA math/mem-efficient kernels)."""
     def __init__(s, dev):
-        sys.path.insert(0, os.environ["IV2_DIR"])
-        from utils.config import Config; from models import InternVideo2_CLIP
-        cfg = Config.from_file(os.environ["IV2_CFG"])
-        for k in ("use_flash_attn", "use_fused_rmsnorm", "use_fused_mlp"): cfg.model.vision_encoder[k] = False  # flash-attn OFF
-        if "use_flash_attn" in cfg.model.text_encoder: cfg.model.text_encoder.use_flash_attn = False
-        cfg.model.vision_encoder.num_frames = 8
-        s.m = InternVideo2_CLIP(config=cfg, is_pretrain=False)
-        sd = torch.load(os.environ["IV2_CKPT"], map_location="cpu"); print(s.m.load_state_dict(sd.get("module", sd), strict=False))
-        s.m = s.m.to(dev).eval(); s.m = s.m.half() if dev == "cuda" else s.m; s.dev = dev; s.mean, s.std = MEAN_IN, STD_IN
-    def video(s, x): return s.m.encode_vision(x.to(s.dev, dtype=next(s.m.parameters()).dtype), test=True).float()
-    def text(s, caps):
-        t = s.m.tokenizer(caps, padding="max_length", truncation=True, max_length=40, return_tensors="pt").to(s.dev)
-        return s.m.encode_text(t).float()
+        import importlib
+        repo = patched_iv2s_repo(); sys.path.insert(0, os.path.dirname(repo))  # import as a plain package (no HF dynamic modules)
+        pkg = os.path.basename(repo); open(f"{repo}/__init__.py", "a").close()
+        mod = importlib.import_module(f"{pkg}.modeling_internvideo2encoder")
+        cfg = mod.config.from_pretrained(repo)
+        for k in ("use_flash_attn", "use_fused_rmsnorm", "use_fused_mlp"): cfg.model.vision_encoder[k] = False
+        cfg.device = dev
+        s.m = mod.InternVideo2_CLIP_small.from_pretrained(repo, config=cfg, torch_dtype=torch.float32).to(dev).eval()
+        if dev == "cuda": s.m = s.m.half()
+        s.dev = dev; s.mean, s.std = MEAN_IN, STD_IN
+    def video(s, x): return s.m.encode_vision(x.to(s.dev, dtype=next(s.m.parameters()).dtype), test=True).float()  # x [B,T,C,H,W]
+    def text(s, caps): return s.m.encode_text(s.m.tokenizer(caps).to(s.dev)).float()
 
 def main(a):
     man = json.load(open(a.manifest)); root = man["root"]; clips = man["clips"][:a.limit] if a.limit else man["clips"]
