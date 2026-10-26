@@ -1,0 +1,11 @@
+torch
+torchvision
+transformers<4.50
+open_clip_torch
+opencv-python-headless
+numpy
+timm
+einops
+ftfy
+regex
+huggingface_hub
