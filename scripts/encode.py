@@ -81,7 +81,7 @@ def patched_iv2s_repo():
 
 class InternVideo2:
     """Public OpenGVLab/InternVideo2_CLIP_S (8 frames, 224), flash_attn-free patched copy (SDPA attention, no fused ops).
-    fp32 on CPU; fp16 on CUDA (T4/sm75 fine: SDPA math/mem-efficient kernels)."""
+    fp32 weights; CUDA forward under autocast fp16 (T4/sm75 OK); CPU plain fp32."""
     def __init__(s, dev):
         import importlib
         repo = patched_iv2s_repo(); sys.path.insert(0, os.path.dirname(repo))  # import as a plain package (no HF dynamic modules)
@@ -91,10 +91,17 @@ class InternVideo2:
         for k in ("use_flash_attn", "use_fused_rmsnorm", "use_fused_mlp"): cfg.model.vision_encoder[k] = False
         cfg.device = dev
         s.m = mod.InternVideo2_CLIP_small.from_pretrained(repo, config=cfg, torch_dtype=torch.float32).to(dev).eval()
-        if dev == "cuda": s.m = s.m.half()
+        # Weights stay fp32 (custom fp32 LayerNorms in mobile_clip_transformer break under .half()).
+        # CUDA: autocast fp16. CPU: plain fp32 unless P3_CPU_AUTOCAST=bf16 (test hook to simulate the mixed path).
+        import contextlib
+        if dev == "cuda": s.ac = lambda: torch.autocast("cuda", dtype=torch.float16)
+        elif os.environ.get("P3_CPU_AUTOCAST") == "bf16": s.ac = lambda: torch.autocast("cpu", dtype=torch.bfloat16)
+        else: s.ac = contextlib.nullcontext
         s.dev = dev; s.mean, s.std = MEAN_IN, STD_IN
-    def video(s, x): return s.m.encode_vision(x.to(s.dev, dtype=next(s.m.parameters()).dtype), test=True).float()  # x [B,T,C,H,W]
-    def text(s, caps): return s.m.encode_text(s.m.tokenizer(caps).to(s.dev)).float()
+    def video(s, x):  # x [B,T,C,H,W] fp32
+        with s.ac(): return s.m.encode_vision(x.to(s.dev), test=True).float()
+    def text(s, caps):
+        with s.ac(): return s.m.encode_text(s.m.tokenizer(caps).to(s.dev)).float()
 
 def main(a):
     man = json.load(open(a.manifest)); root = man["root"]; clips = man["clips"][:a.limit] if a.limit else man["clips"]
