@@ -1,0 +1,2 @@
+models: openclip_meanpool
+viclip_l

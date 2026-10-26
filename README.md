@@ -17,9 +17,7 @@ three positions, so only position differs. 1000 clips x (1 + 3 pos x 3 seeds) = 
 ## Encode
 `python scripts/encode.py --model {viclip_b,viclip_l,openclip_meanpool,internvideo2}` -> `emb/<model>/text.npy`,
 `video_<cond>_s<seed>.npy`. GPU: `scripts/gpu_job.sh`. **CPU fallback (no GPU): ViCLIP-B** runs on CPU
-(`--model viclip_b --device cpu`, ~0.5 s/clip on 8 cores -> ~80 min for 10k rows). InternVideo2 runs with flash-attn
-/fused ops off; it needs the InternVideo repo and the gated `OpenGVLab/InternVideo2-CLIP-1B-224p-f8` weights
-(no public L14 CLIP checkpoint found) — set `IV2_DIR`, `IV2_CFG`, `IV2_CKPT`. That path is untested.
+(`--model viclip_b --device cpu`, ~0.5 s/clip on 8 cores -> ~80 min for 10k rows). InternVideo2 target is the public `OpenGVLab/InternVideo2_CLIP_S` (flash-attn / fused ops off; needs the InternVideo repo; set `IV2_DIR`, `IV2_CFG`, `IV2_CKPT`). In the Block 1 GPU run (Kaggle T4) **InternVideo2_CLIP_S failed to load**: the InternVideo backbone imports `flash_attention_class`, which imports `flash_attn` (`ModuleNotFoundError: No module named 'flash_attn'`), and the T4 can't run it anyway; see `results/logs/iv2s.log`. The job pins `transformers<4.50` (requirements.txt), needed by the ViCLIP remote code.
 
 ## Score + pre-registered rule
 `python scripts/score.py --emb emb --models internvideo2 viclip_l openclip_meanpool --null openclip_meanpool`
@@ -31,6 +29,17 @@ noise floor) and `results/block1_verdict.json`.
 - otherwise **UNCLEAR**.
 `python scripts/test_score.py` checks the scorer (random -> KILL, synthetic start-bias -> GO).
 Block 2 is out of scope here.
+
+
+## Block 1 results (GPU run, Kaggle T4, repo commit 5bb6715; models run: viclip_l, openclip_meanpool)
+Text-to-video on MSR-VTT 1k-A, mean ± std over junk seeds 0,1,2 (`results/block1.csv`, `results/block1_verdict.json`, logs in `results/logs/`).
+
+| model | clean R@1/R@5 | start R@1 | middle R@1 | end R@1 | start R@5 | middle R@5 | end R@5 | PE | worst | noise |
+|---|---|---|---|---|---|---|---|---|---|---|
+| viclip_l | 39.2 / 63.9 | 18.87±0.15 | 9.23±0.81 | 23.73±0.38 | 40.07±0.93 | 25.97±0.55 | 43.40±1.22 | 14.50 | middle | 1.63 |
+| openclip_meanpool (null) | 36.1 / 57.5 | 26.10±0.62 | 27.03±1.45 | 26.90±1.21 | 48.13±1.18 | 50.70±0.92 | 49.97±1.34 | 0.93 | start | 2.89 |
+
+**Verdict: UNCLEAR.** ViCLIP-L shows a large position effect (14.5 pts vs null 0.93), so it is not KILL, but the worst position is MIDDLE, not START, so the pre-registered GO is not met. InternVideo2 did not run. Block 2 not started.
 
 ---
 ## Legacy (earlier smoke attempt, superseded)

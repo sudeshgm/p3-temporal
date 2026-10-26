@@ -1,0 +1,58 @@
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+gradio 6.26.0 requires huggingface-hub<2.0,>=1.16.0, but you have huggingface-hub 0.36.2 which is incompatible.
+gradio 6.26.0 requires pillow<13.0,>=8.0, but you have pillow 13.0.0 which is incompatible.
+diffusers 0.40.0 requires huggingface-hub<2.0,>=1.23.0, but you have huggingface-hub 0.36.2 which is incompatible.
+Fetching 12 files:   0%|          | 0/12 [00:00<?, ?it/s]Fetching 12 files:   8%|▊         | 1/12 [00:00<00:04,  2.24it/s]Fetching 12 files:  17%|█▋        | 2/12 [00:00<00:02,  3.93it/s]Fetching 12 files:  25%|██▌       | 3/12 [00:01<00:04,  2.01it/s]Fetching 12 files:  67%|██████▋   | 8/12 [00:07<00:04,  1.03s/it]Fetching 12 files: 100%|██████████| 12/12 [00:07<00:00,  1.64it/s]
+/usr/local/lib/python3.13/dist-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+/usr/local/lib/python3.13/dist-packages/timm/models/registry.py:4: FutureWarning: Importing from timm.models.registry is deprecated, please import via timm.models
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.models", FutureWarning)
+/root/.cache/huggingface/modules/transformers_modules/1652361522e1cb41c28cdfae870f690d00e7456b/viclip_text.py:4: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import packaging
+viclip_l: 1000 clips, 10000 rows, 10000 unique frame tuples
+/usr/local/lib/python3.13/dist-packages/torch/_dynamo/eval_frame.py:1263: UserWarning: torch.utils.checkpoint: the use_reentrant parameter should be passed explicitly. Starting in PyTorch 2.9, calling checkpoint without use_reentrant will raise an exception. use_reentrant=False is recommended, but if you need to preserve the current default behavior, you can pass use_reentrant=True. Refer to docs for more details on the differences between the two variants.
+  return fn(*args, **kwargs)
+/usr/local/lib/python3.13/dist-packages/torch/utils/checkpoint.py:232: UserWarning: None of the inputs have requires_grad=True. Gradients will be None
+  check_backward_validity(args)
+  32/10000
+  672/10000
+  1312/10000
+  1952/10000
+  2592/10000
+  3232/10000
+  3872/10000
+  4512/10000
+  5152/10000
+  5792/10000
+  6432/10000
+  7072/10000
+  7712/10000
+  8352/10000
+  8992/10000
+  9632/10000
+wrote emb/viclip_l [('clean', -1), ('end', 0), ('end', 1), ('end', 2), ('middle', 0), ('middle', 1), ('middle', 2), ('start', 0), ('start', 1), ('start', 2)]
+/usr/local/lib/python3.13/dist-packages/open_clip/factory.py:450: UserWarning: QuickGELU mismatch between final model config (quick_gelu=False) and pretrained tag 'openai' (quick_gelu=True).
+  warnings.warn(
+openclip_meanpool: 1000 clips, 10000 rows, 10000 unique frame tuples
+  32/10000
+  672/10000
+  1312/10000
+  1952/10000
+  2592/10000
+  3232/10000
+  3872/10000
+  4512/10000
+  5152/10000
+  5792/10000
+  6432/10000
+  7072/10000
+  7712/10000
+  8352/10000
+  8992/10000
+  9632/10000
+wrote emb/openclip_meanpool [('clean', -1), ('end', 0), ('end', 1), ('end', 2), ('middle', 0), ('middle', 1), ('middle', 2), ('start', 0), ('start', 1), ('start', 2)]
+WARN: InternVideo2 env not set; skipping
+viclip_l {'PE': 14.5, 'worst': 'middle', 'noise': 1.63}
+openclip_meanpool {'PE': 0.93, 'worst': 'start', 'noise': 2.89}
+VERDICT: UNCLEAR
+GPU_JOB_EXIT=0

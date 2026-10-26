@@ -1,0 +1,32 @@
+IV2S_EXIT=1
+5:Traceback (most recent call last):
+6-  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/internvl_clip_vision.py", line 12, in <module>
+7-    from .flash_attention_class import FlashAttention
+8-  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/flash_attention_class.py", line 6, in <module>
+9-    from flash_attn.flash_attn_interface import flash_attn_varlen_qkvpacked_func
+10-ModuleNotFoundError: No module named 'flash_attn'
+11-
+12-During handling of the above exception, another exception occurred:
+13-
+14:Traceback (most recent call last):
+15-  File "/kaggle/working/p3-temporal/scripts/encode.py", line 81, in <module>
+16-    main(p.parse_args())
+17-    ~~~~^^^^^^^^^^^^^^^^
+18-  File "/kaggle/working/p3-temporal/scripts/encode.py", line 60, in main
+19-    M = {"viclip_b": lambda: ViCLIP("b", a.device), "viclip_l": lambda: ViCLIP("l", a.device),
+20-         "openclip_meanpool": lambda: OpenCLIPMean(a.device), "internvideo2": lambda: InternVideo2(a.device)}[a.model]()
+21-  File "/kaggle/working/p3-temporal/scripts/encode.py", line 61, in <lambda>
+22-    "openclip_meanpool": lambda: OpenCLIPMean(a.device), "internvideo2": lambda: InternVideo2(a.device)}[a.model]()
+23-                                                                                 ~~~~~~~~~~~~^^^^^^^^^^
+24-  File "/kaggle/working/p3-temporal/scripts/encode.py", line 44, in __init__
+25-    os.chdir(os.environ['IV2_DIR']); from utils.config import Config; import models as _ivm
+26-                                                                      ^^^^^^^^^^^^^^^^^^^^^
+27-  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/__init__.py", line 1, in <module>
+28-    from .internvideo2_clip import InternVideo2_CLIP
+29-  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/internvideo2_clip.py", line 10, in <module>
+30-    from .backbones.internvideo2 import InternVideo2, LLaMA, Tokenizer
+31-  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/__init__.py", line 1, in <module>
+32-    from .internvl_clip_vision import internvl_clip_6b
+33-  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/internvl_clip_vision.py", line 14, in <module>
+34-    from flash_attention_class import FlashAttention
+35-ModuleNotFoundError: No module named 'flash_attention_class'

@@ -1,0 +1,35 @@
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files:  50%|█████     | 1/2 [00:00<00:00,  4.22it/s]Fetching 2 files: 100%|██████████| 2/2 [00:05<00:00,  3.24s/it]Fetching 2 files: 100%|██████████| 2/2 [00:05<00:00,  2.79s/it]
+2
+/usr/local/lib/python3.13/dist-packages/timm/models/layers/__init__.py:49: FutureWarning: Importing from timm.models.layers is deprecated, please import via timm.layers
+  warnings.warn(f"Importing from {__name__} is deprecated, please import via timm.layers", FutureWarning)
+Traceback (most recent call last):
+  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/internvl_clip_vision.py", line 12, in <module>
+    from .flash_attention_class import FlashAttention
+  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/flash_attention_class.py", line 6, in <module>
+    from flash_attn.flash_attn_interface import flash_attn_varlen_qkvpacked_func
+ModuleNotFoundError: No module named 'flash_attn'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/kaggle/working/p3-temporal/scripts/encode.py", line 81, in <module>
+    main(p.parse_args())
+    ~~~~^^^^^^^^^^^^^^^^
+  File "/kaggle/working/p3-temporal/scripts/encode.py", line 60, in main
+    M = {"viclip_b": lambda: ViCLIP("b", a.device), "viclip_l": lambda: ViCLIP("l", a.device),
+         "openclip_meanpool": lambda: OpenCLIPMean(a.device), "internvideo2": lambda: InternVideo2(a.device)}[a.model]()
+  File "/kaggle/working/p3-temporal/scripts/encode.py", line 61, in <lambda>
+    "openclip_meanpool": lambda: OpenCLIPMean(a.device), "internvideo2": lambda: InternVideo2(a.device)}[a.model]()
+                                                                                 ~~~~~~~~~~~~^^^^^^^^^^
+  File "/kaggle/working/p3-temporal/scripts/encode.py", line 44, in __init__
+    os.chdir(os.environ['IV2_DIR']); from utils.config import Config; import models as _ivm
+                                                                      ^^^^^^^^^^^^^^^^^^^^^
+  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/__init__.py", line 1, in <module>
+    from .internvideo2_clip import InternVideo2_CLIP
+  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/internvideo2_clip.py", line 10, in <module>
+    from .backbones.internvideo2 import InternVideo2, LLaMA, Tokenizer
+  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/__init__.py", line 1, in <module>
+    from .internvl_clip_vision import internvl_clip_6b
+  File "/kaggle/working/InternVideo/InternVideo2/multi_modality/models/backbones/internvideo2/internvl_clip_vision.py", line 14, in <module>
+    from flash_attention_class import FlashAttention
+ModuleNotFoundError: No module named 'flash_attention_class'
